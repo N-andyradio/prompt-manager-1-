@@ -2,7 +2,16 @@
 
 터미널에서 메뉴 번호를 입력해 프롬프트를 추가, 조회, 검색, 즐겨찾기 관리하는 콘솔 프로그램.
 데이터는 프로그램 실행 중에만 유지된다. (종료 시 초기화)
+보너스 기능으로 JSON 파일 저장/불러오기와 Markdown 내보내기를 메뉴에서 직접 실행할 수 있다.
 """
+
+import json
+from pathlib import Path
+
+# 보너스 기능에서 사용하는 파일 경로 (프로그램 파일과 같은 폴더 기준)
+BASE_DIR = Path(__file__).parent
+JSON_FILE = BASE_DIR / "prompts.json"
+EXPORT_DIR = BASE_DIR / "export"
 
 # 미리 정의된 카테고리 목록
 CATEGORIES = ["텍스트 생성", "이미지 생성", "영상 생성", "페르소나", "자동화", "기타"]
@@ -348,6 +357,72 @@ def show_top(limit=5):
 
 
 # ---------------------------------------------------------------------------
+# 보너스 1 - JSON 저장/불러오기, Markdown 내보내기
+# ---------------------------------------------------------------------------
+
+def save_to_json():
+    """현재 프롬프트 목록을 JSON 파일로 저장한다."""
+    with open(JSON_FILE, "w", encoding="utf-8") as file:
+        json.dump(prompts, file, ensure_ascii=False, indent=2)
+    print(f"\n{len(prompts)}개의 프롬프트를 저장했습니다: {JSON_FILE.name}")
+
+
+def load_from_json():
+    """JSON 파일에서 프롬프트 목록을 불러와 현재 목록을 교체한다."""
+    if not JSON_FILE.exists():
+        print(f"\n저장된 파일이 없습니다. 먼저 'JSON 저장'을 실행해주세요. ({JSON_FILE.name})")
+        return
+
+    try:
+        with open(JSON_FILE, encoding="utf-8") as file:
+            data = json.load(file)
+    except json.JSONDecodeError:
+        print("\nJSON 파일 형식이 올바르지 않아 불러올 수 없습니다.")
+        return
+
+    loaded = []
+    for item in data:
+        # 필수 항목이 없는 데이터는 건너뛰고, 선택 항목은 기본값을 채운다.
+        if not all(key in item for key in ("title", "content", "category")):
+            continue
+        item.setdefault("favorite", False)
+        item.setdefault("views", 0)
+        loaded.append(item)
+
+    prompts[:] = loaded  # 리스트 내용 자체를 교체 (global 없이 수정)
+    print(f"\n{len(loaded)}개의 프롬프트를 불러왔습니다.")
+
+
+def export_markdown():
+    """전체 프롬프트를 카테고리별 Markdown 파일로 내보낸다."""
+    if not prompts:
+        print("\n내보낼 프롬프트가 없습니다.")
+        return
+
+    EXPORT_DIR.mkdir(exist_ok=True)
+    for category in get_all_categories():
+        items = [prompt for prompt in prompts if prompt["category"] == category]
+        if not items:
+            continue
+
+        lines = [f"# {category}", ""]
+        for prompt in items:
+            star = " ⭐" if prompt["favorite"] else ""
+            lines.append(f"## {prompt['title']}{star}")
+            lines.append("")
+            lines.append("```")
+            lines.append(prompt["content"])
+            lines.append("```")
+            lines.append("")
+
+        # 파일 이름에 쓸 수 없는 문자는 '_'로 바꾼다.
+        safe_name = "".join("_" if ch in '\\/:*?"<>|' else ch for ch in category)
+        path = EXPORT_DIR / f"{safe_name}.md"
+        path.write_text("\n".join(lines), encoding="utf-8")
+        print(f"내보내기 완료: {path.relative_to(BASE_DIR)} ({len(items)}개)")
+
+
+# ---------------------------------------------------------------------------
 # 메뉴 / 메인 루프
 # ---------------------------------------------------------------------------
 
@@ -365,6 +440,9 @@ def show_menu():
     print("8. 프롬프트 수정")
     print("9. 프롬프트 삭제")
     print("10. 인기 프롬프트 TOP 5")
+    print("11. JSON 파일로 저장")
+    print("12. JSON 파일에서 불러오기")
+    print("13. 카테고리별 Markdown 내보내기")
     print("0. 종료")
 
 
@@ -396,6 +474,12 @@ def main():
                 delete_prompt()
             case "10":
                 show_top()
+            case "11":
+                save_to_json()
+            case "12":
+                load_from_json()
+            case "13":
+                export_markdown()
             case "0":
                 print("프로그램을 종료합니다. 안녕히 가세요!")
                 break
