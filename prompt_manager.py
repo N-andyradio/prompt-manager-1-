@@ -54,6 +54,18 @@ prompts = [
         "favorite": False,
         "views": 0,
     },
+    {
+        "title": "코드 구조 복제 요청 (로그인 → 회원가입)",
+        "content": (
+            "[명령]: Clone\n"
+            "[참고 코드]: 로그인 기능 코드\n"
+            "[요청]: 위 코드 구조를 유지하면서 회원가입 기능으로 바꿔줘\n"
+            "[언어]: 동일 (Python)"
+        ),
+        "category": "텍스트 생성",
+        "favorite": False,
+        "views": 0,
+    },
 ]
 
 
