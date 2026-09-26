@@ -157,6 +157,39 @@ def show_list():
     print(f"\n총 {len(prompts)}개의 프롬프트")
 
 
+def get_all_categories():
+    """기본 카테고리에 사용자가 직접 입력한 카테고리를 더한 목록을 돌려준다."""
+    categories = list(CATEGORIES)
+    for prompt in prompts:
+        if prompt["category"] not in categories:
+            categories.append(prompt["category"])
+    return categories
+
+
+def show_by_category():
+    """카테고리를 선택받아 해당 카테고리의 프롬프트만 출력한다."""
+    print("\n=== 카테고리별 조회 ===")
+    categories = get_all_categories()
+    for number, category in enumerate(categories, start=1):
+        print(f"{number}) {category}")
+
+    choice = input("선택: ").strip()
+    if not (choice.isdigit() and 1 <= int(choice) <= len(categories)):
+        print("잘못된 번호입니다. 메뉴로 돌아갑니다.")
+        return
+
+    selected = categories[int(choice) - 1]
+    indexes = [i for i, prompt in enumerate(prompts) if prompt["category"] == selected]
+
+    if not indexes:
+        print(f"\n[{selected}] 카테고리에 등록된 프롬프트가 없습니다.")
+        return
+
+    print(f"\n[{selected}] 카테고리 프롬프트:")
+    print_prompt_list(indexes)
+    print(f"\n총 {len(indexes)}개의 프롬프트")
+
+
 # ---------------------------------------------------------------------------
 # 메뉴 / 메인 루프
 # ---------------------------------------------------------------------------
@@ -167,6 +200,7 @@ def show_menu():
     print("=== 나만의 프롬프트 관리 ===")
     print("1. 프롬프트 추가")
     print("2. 프롬프트 목록")
+    print("3. 카테고리별 조회")
     print("0. 종료")
 
 
@@ -182,6 +216,8 @@ def main():
                 add_prompt()
             case "2":
                 show_list()
+            case "3":
+                show_by_category()
             case "0":
                 print("프로그램을 종료합니다. 안녕히 가세요!")
                 break
