@@ -105,6 +105,23 @@ def choose_category(allow_custom=True):
         print("잘못된 번호입니다. 다시 선택해주세요.")
 
 
+def input_prompt_index(label="번호 입력: "):
+    """프롬프트 번호를 입력받아 리스트 인덱스를 돌려준다.
+
+    프롬프트가 없거나 잘못된 번호를 입력하면 안내 메시지를 출력하고 None을 돌려준다.
+    """
+    if not prompts:
+        print("등록된 프롬프트가 없습니다.")
+        return None
+
+    choice = input(label).strip()
+    if choice.isdigit() and 1 <= int(choice) <= len(prompts):
+        return int(choice) - 1
+
+    print(f"잘못된 번호입니다. 1 ~ {len(prompts)} 사이의 번호를 입력해주세요.")
+    return None
+
+
 # ---------------------------------------------------------------------------
 # 출력 도우미 함수
 # ---------------------------------------------------------------------------
@@ -209,6 +226,26 @@ def search_prompt():
     print(f"\n{len(indexes)}개의 프롬프트를 찾았습니다.")
 
 
+def show_detail():
+    """번호를 입력받아 해당 프롬프트의 전체 내용을 출력한다."""
+    print("\n=== 프롬프트 상세 보기 ===")
+    index = input_prompt_index()
+    if index is None:
+        return
+
+    prompt = prompts[index]
+    line = "─" * 40
+    print()
+    print(line)
+    print(f"제목: {prompt['title']}")
+    print(f"카테고리: {prompt['category']}")
+    print(f"즐겨찾기: {'⭐' if prompt['favorite'] else '-'}")
+    print(line)
+    print("내용:")
+    print(prompt["content"])
+    print(line)
+
+
 # ---------------------------------------------------------------------------
 # 메뉴 / 메인 루프
 # ---------------------------------------------------------------------------
@@ -221,6 +258,7 @@ def show_menu():
     print("2. 프롬프트 목록")
     print("3. 카테고리별 조회")
     print("4. 프롬프트 검색")
+    print("5. 프롬프트 상세 보기")
     print("0. 종료")
 
 
@@ -240,6 +278,8 @@ def main():
                 show_by_category()
             case "4":
                 search_prompt()
+            case "5":
+                show_detail()
             case "0":
                 print("프로그램을 종료합니다. 안녕히 가세요!")
                 break
