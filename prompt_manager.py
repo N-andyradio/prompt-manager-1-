@@ -190,6 +190,25 @@ def show_by_category():
     print(f"\n총 {len(indexes)}개의 프롬프트")
 
 
+def search_prompt():
+    """키워드가 제목 또는 내용에 포함된 프롬프트를 찾아 출력한다. (대소문자 무시)"""
+    print("\n=== 프롬프트 검색 ===")
+    keyword = input_not_empty("검색어: ").lower()
+
+    indexes = []
+    for i, prompt in enumerate(prompts):
+        if keyword in prompt["title"].lower() or keyword in prompt["content"].lower():
+            indexes.append(i)
+
+    if not indexes:
+        print(f"\n'{keyword}'에 해당하는 프롬프트가 없습니다.")
+        return
+
+    print("\n검색 결과:")
+    print_prompt_list(indexes)
+    print(f"\n{len(indexes)}개의 프롬프트를 찾았습니다.")
+
+
 # ---------------------------------------------------------------------------
 # 메뉴 / 메인 루프
 # ---------------------------------------------------------------------------
@@ -201,6 +220,7 @@ def show_menu():
     print("1. 프롬프트 추가")
     print("2. 프롬프트 목록")
     print("3. 카테고리별 조회")
+    print("4. 프롬프트 검색")
     print("0. 종료")
 
 
@@ -218,6 +238,8 @@ def main():
                 show_list()
             case "3":
                 show_by_category()
+            case "4":
+                search_prompt()
             case "0":
                 print("프로그램을 종료합니다. 안녕히 가세요!")
                 break
