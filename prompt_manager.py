@@ -2,7 +2,16 @@
 
 터미널에서 메뉴 번호를 입력해 프롬프트를 추가, 조회, 검색, 즐겨찾기 관리하는 콘솔 프로그램.
 데이터는 프로그램 실행 중에만 유지된다. (종료 시 초기화)
+보너스 기능으로 JSON 파일 저장/불러오기와 Markdown 내보내기를 메뉴에서 직접 실행할 수 있다.
 """
+
+import json
+from pathlib import Path
+
+# 보너스 기능에서 사용하는 파일 경로 (프로그램 파일과 같은 폴더 기준)
+BASE_DIR = Path(__file__).parent
+JSON_FILE = BASE_DIR / "prompts.json"
+EXPORT_DIR = BASE_DIR / "export"
 
 # 미리 정의된 카테고리 목록
 CATEGORIES = ["텍스트 생성", "이미지 생성", "영상 생성", "페르소나", "자동화", "기타"]
@@ -20,6 +29,7 @@ prompts = [
         ),
         "category": "텍스트 생성",
         "favorite": True,
+        "views": 0,
     },
     {
         "title": "제품 썸네일 생성",
@@ -31,6 +41,7 @@ prompts = [
         ),
         "category": "이미지 생성",
         "favorite": False,
+        "views": 0,
     },
     {
         "title": "IT 컨설턴트 페르소나",
@@ -41,6 +52,7 @@ prompts = [
         ),
         "category": "페르소나",
         "favorite": False,
+        "views": 0,
     },
     {
         "title": "뉴스 요약 프롬프트",
@@ -53,6 +65,7 @@ prompts = [
         ),
         "category": "자동화",
         "favorite": False,
+        "views": 0,
     },
     {
         "title": "광고 스크립트 작성",
@@ -63,6 +76,7 @@ prompts = [
         ),
         "category": "영상 생성",
         "favorite": False,
+        "views": 0,
     },
 ]
 
@@ -158,6 +172,7 @@ def add_prompt():
         "content": content,
         "category": category,
         "favorite": False,  # 즐겨찾기 기본값은 False
+        "views": 0,  # 상세 보기 횟수 (보너스)
     }
     prompts.append(new_prompt)
     print("\n프롬프트가 추가되었습니다!")
@@ -234,12 +249,15 @@ def show_detail():
         return
 
     prompt = prompts[index]
+    prompt["views"] += 1  # 상세 보기를 할 때마다 조회수 1 증가
+
     line = "─" * 40
     print()
     print(line)
     print(f"제목: {prompt['title']}")
     print(f"카테고리: {prompt['category']}")
     print(f"즐겨찾기: {'⭐' if prompt['favorite'] else '-'}")
+    print(f"조회수: {prompt['views']}회")
     print(line)
     print("내용:")
     print(prompt["content"])
@@ -277,6 +295,134 @@ def show_favorites():
 
 
 # ---------------------------------------------------------------------------
+# 보너스 2 - 수정 / 삭제 / 조회수 TOP
+# ---------------------------------------------------------------------------
+
+def edit_prompt():
+    """번호를 입력받아 프롬프트의 제목, 내용, 카테고리를 수정한다.
+
+    아무것도 입력하지 않고 Enter를 누르면 기존 값을 그대로 유지한다.
+    """
+    print("\n=== 프롬프트 수정 ===")
+    index = input_prompt_index("수정할 프롬프트 번호: ")
+    if index is None:
+        return
+
+    prompt = prompts[index]
+    print("(변경하지 않으려면 그냥 Enter를 누르세요)")
+    new_title = input(f"제목 [{prompt['title']}]: ").strip()
+    new_content = input("내용 (새 내용 입력): ").strip()
+    change_category = input(f"카테고리 [{prompt['category']}] 변경할까요? (y/N): ").strip().lower()
+
+    if new_title:
+        prompt["title"] = new_title
+    if new_content:
+        prompt["content"] = new_content
+    if change_category == "y":
+        prompt["category"] = choose_category()
+
+    print(f"\n'{prompt['title']}' 프롬프트가 수정되었습니다!")
+
+
+def delete_prompt():
+    """번호를 입력받아 확인 후 프롬프트를 삭제한다."""
+    print("\n=== 프롬프트 삭제 ===")
+    index = input_prompt_index("삭제할 프롬프트 번호: ")
+    if index is None:
+        return
+
+    title = prompts[index]["title"]
+    answer = input(f"'{title}' 프롬프트를 정말 삭제할까요? (y/N): ").strip().lower()
+    if answer != "y":
+        print("삭제를 취소했습니다.")
+        return
+
+    prompts.pop(index)
+    print(f"'{title}' 프롬프트를 삭제했습니다.")
+
+
+def show_top(limit=5):
+    """조회수가 높은 순서로 상위 프롬프트를 출력한다."""
+    print(f"\n=== 인기 프롬프트 TOP {limit} ===")
+    viewed = [i for i, prompt in enumerate(prompts) if prompt["views"] > 0]
+    if not viewed:
+        print("아직 조회된 프롬프트가 없습니다. '5. 프롬프트 상세 보기'로 조회해보세요.")
+        return
+
+    # 조회수 기준 내림차순 정렬
+    viewed.sort(key=lambda i: prompts[i]["views"], reverse=True)
+    for rank, index in enumerate(viewed[:limit], start=1):
+        prompt = prompts[index]
+        print(f"{rank}위. {format_prompt_line(index + 1, prompt)} (조회 {prompt['views']}회)")
+
+
+# ---------------------------------------------------------------------------
+# 보너스 1 - JSON 저장/불러오기, Markdown 내보내기
+# ---------------------------------------------------------------------------
+
+def save_to_json():
+    """현재 프롬프트 목록을 JSON 파일로 저장한다."""
+    with open(JSON_FILE, "w", encoding="utf-8") as file:
+        json.dump(prompts, file, ensure_ascii=False, indent=2)
+    print(f"\n{len(prompts)}개의 프롬프트를 저장했습니다: {JSON_FILE.name}")
+
+
+def load_from_json():
+    """JSON 파일에서 프롬프트 목록을 불러와 현재 목록을 교체한다."""
+    if not JSON_FILE.exists():
+        print(f"\n저장된 파일이 없습니다. 먼저 'JSON 저장'을 실행해주세요. ({JSON_FILE.name})")
+        return
+
+    try:
+        with open(JSON_FILE, encoding="utf-8") as file:
+            data = json.load(file)
+    except json.JSONDecodeError:
+        print("\nJSON 파일 형식이 올바르지 않아 불러올 수 없습니다.")
+        return
+
+    loaded = []
+    for item in data:
+        # 필수 항목이 없는 데이터는 건너뛰고, 선택 항목은 기본값을 채운다.
+        if not all(key in item for key in ("title", "content", "category")):
+            continue
+        item.setdefault("favorite", False)
+        item.setdefault("views", 0)
+        loaded.append(item)
+
+    prompts[:] = loaded  # 리스트 내용 자체를 교체 (global 없이 수정)
+    print(f"\n{len(loaded)}개의 프롬프트를 불러왔습니다.")
+
+
+def export_markdown():
+    """전체 프롬프트를 카테고리별 Markdown 파일로 내보낸다."""
+    if not prompts:
+        print("\n내보낼 프롬프트가 없습니다.")
+        return
+
+    EXPORT_DIR.mkdir(exist_ok=True)
+    for category in get_all_categories():
+        items = [prompt for prompt in prompts if prompt["category"] == category]
+        if not items:
+            continue
+
+        lines = [f"# {category}", ""]
+        for prompt in items:
+            star = " ⭐" if prompt["favorite"] else ""
+            lines.append(f"## {prompt['title']}{star}")
+            lines.append("")
+            lines.append("```")
+            lines.append(prompt["content"])
+            lines.append("```")
+            lines.append("")
+
+        # 파일 이름에 쓸 수 없는 문자는 '_'로 바꾼다.
+        safe_name = "".join("_" if ch in '\\/:*?"<>|' else ch for ch in category)
+        path = EXPORT_DIR / f"{safe_name}.md"
+        path.write_text("\n".join(lines), encoding="utf-8")
+        print(f"내보내기 완료: {path.relative_to(BASE_DIR)} ({len(items)}개)")
+
+
+# ---------------------------------------------------------------------------
 # 메뉴 / 메인 루프
 # ---------------------------------------------------------------------------
 
@@ -291,6 +437,12 @@ def show_menu():
     print("5. 프롬프트 상세 보기")
     print("6. 즐겨찾기 관리")
     print("7. 즐겨찾기 목록")
+    print("8. 프롬프트 수정")
+    print("9. 프롬프트 삭제")
+    print("10. 인기 프롬프트 TOP 5")
+    print("11. JSON 파일로 저장")
+    print("12. JSON 파일에서 불러오기")
+    print("13. 카테고리별 Markdown 내보내기")
     print("0. 종료")
 
 
@@ -316,6 +468,18 @@ def main():
                 toggle_favorite()
             case "7":
                 show_favorites()
+            case "8":
+                edit_prompt()
+            case "9":
+                delete_prompt()
+            case "10":
+                show_top()
+            case "11":
+                save_to_json()
+            case "12":
+                load_from_json()
+            case "13":
+                export_markdown()
             case "0":
                 print("프로그램을 종료합니다. 안녕히 가세요!")
                 break
