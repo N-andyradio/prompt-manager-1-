@@ -324,4 +324,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (KeyboardInterrupt, EOFError):
+        # Ctrl+C 또는 입력 스트림 종료 시 오류 메시지 대신 정상 종료 안내를 보여준다.
+        print("\n\n프로그램을 종료합니다. 안녕히 가세요!")
